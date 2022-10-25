@@ -606,7 +606,12 @@ def archive_runs(db, archive_db, time, *, delete=False):
         """
         Copies rows from `sel` to `tbl`.
         """
-        for chunk in itr.chunks(in_eng.execute(sel), chunk_size):
+        # Need to convert row tuples to dicts for sa 1.4.
+        # https://github.com/sqlalchemy/sqlalchemy/issues/8010
+        result_dicts = (
+            dict(zip(sel.c.keys(), tup)) for tup in in_eng.execute(sel)
+        )
+        for chunk in itr.chunks(result_dicts, chunk_size):
             with arc_eng.begin() as tx:
                 tx.execute(sa.insert(tbl), chunk)
 
